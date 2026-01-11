@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Plus, X, Trash2, Edit2 } from 'lucide-react';
 
 const PRESET_COLORS = [
@@ -32,9 +32,10 @@ const SavingsTracker = () => {
   const [savingAmount, setSavingAmount] = useState('');
   const [savingDate, setSavingDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const [editName, setEditName] = useState('');
-  const [editAmount, setEditAmount] = useState('');
-  const [editDate, setEditDate] = useState('');
+  // Using refs to avoid re-render issues
+  const editNameRef = useRef('');
+  const editAmountRef = useRef('');
+  const editDateRef = useRef('');
 
   useEffect(() => {
     loadData();
@@ -113,23 +114,24 @@ const SavingsTracker = () => {
     setShowNewGoalForm(false);
   };
 
-  const handleEditGoalName = async () => {
-    if (!editName.trim()) {
+  const handleEditGoalName = () => {
+    const newName = editNameRef.current;
+    if (!newName.trim()) {
       alert('Goal name cannot be empty');
       return;
     }
 
     const updatedGoals = goals.map(goal => {
       if (goal.id === goalToEdit) {
-        return { ...goal, name: editName };
+        return { ...goal, name: newName };
       }
       return goal;
     });
 
-    await saveData(updatedGoals);
+    saveData(updatedGoals);
     setShowEditGoal(false);
     setGoalToEdit(null);
-    setEditName('');
+    editNameRef.current = '';
   };
 
   const handleAddSavings = () => {
@@ -159,8 +161,11 @@ const SavingsTracker = () => {
     setShowAddSavings(false);
   };
 
-  const handleEditContribution = async () => {
-    if (!editAmount) {
+  const handleEditContribution = () => {
+    const newAmount = editAmountRef.current;
+    const newDate = editDateRef.current;
+    
+    if (!newAmount) {
       alert('Amount cannot be empty');
       return;
     }
@@ -168,7 +173,7 @@ const SavingsTracker = () => {
     const updatedGoals = goals.map(goal => {
       if (goal.id === selectedGoalId) {
         const oldContribution = goal.contributions.find(c => c.id === contributionToEdit);
-        const amountDifference = parseFloat(editAmount) - oldContribution.amount;
+        const amountDifference = parseFloat(newAmount) - oldContribution.amount;
         
         return {
           ...goal,
@@ -177,8 +182,8 @@ const SavingsTracker = () => {
             if (c.id === contributionToEdit) {
               return {
                 ...c,
-                amount: parseFloat(editAmount),
-                date: editDate
+                amount: parseFloat(newAmount),
+                date: newDate
               };
             }
             return c;
@@ -188,11 +193,11 @@ const SavingsTracker = () => {
       return goal;
     });
 
-    await saveData(updatedGoals);
+    saveData(updatedGoals);
     setShowEditContribution(false);
     setContributionToEdit(null);
-    setEditAmount('');
-    setEditDate('');
+    editAmountRef.current = '';
+    editDateRef.current = '';
   };
 
   const confirmDeleteContribution = () => {
@@ -264,7 +269,7 @@ const SavingsTracker = () => {
               <div key={goal.id} className="bg-white p-4 rounded-lg shadow hover:shadow-md transition flex items-center justify-between">
                 <div onClick={() => { setSelectedGoalId(goal.id); setCurrentView('details'); }} className="flex-1 cursor-pointer"><h3 className="font-semibold text-lg text-center">{goal.name}</h3></div>
                 <div className="flex gap-2">
-                  <button onClick={(e) => { e.stopPropagation(); setGoalToEdit(goal.id); setEditName(goal.name); setShowEditGoal(true); }} className="text-blue-600 hover:text-blue-700 p-2 rounded hover:bg-blue-50 transition"><Edit2 size={20} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); setGoalToEdit(goal.id); editNameRef.current = goal.name; setShowEditGoal(true); }} className="text-blue-600 hover:text-blue-700 p-2 rounded hover:bg-blue-50 transition"><Edit2 size={20} /></button>
                   <button onClick={(e) => { e.stopPropagation(); setGoalToDelete(goal.id); setShowDeleteConfirm(true); }} className="text-red-600 hover:text-red-700 p-2 rounded hover:bg-red-50 transition"><Trash2 size={20} /></button>
                 </div>
               </div>
@@ -290,9 +295,9 @@ const SavingsTracker = () => {
       {showEditGoal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-md">
-            <div className="flex justify-between mb-4"><h2 className="text-xl font-bold">Edit Goal Name</h2><button type="button" onClick={() => { setShowEditGoal(false); setGoalToEdit(null); setEditName(''); }}><X size={20} className="text-gray-500 hover:text-gray-700" /></button></div>
+            <div className="flex justify-between mb-4"><h2 className="text-xl font-bold">Edit Goal Name</h2><button type="button" onClick={() => { setShowEditGoal(false); setGoalToEdit(null); editNameRef.current = ''; }}><X size={20} className="text-gray-500 hover:text-gray-700" /></button></div>
             <div className="space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Goal Name</label><input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Goal Name</label><input type="text" defaultValue={editNameRef.current} onChange={(e) => { editNameRef.current = e.target.value; }} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
               <button type="button" onClick={handleEditGoalName} className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium">Save Changes</button>
             </div>
           </div>
@@ -340,7 +345,7 @@ const SavingsTracker = () => {
                     </div>
                     {!contrib.isInitial && (
                       <div className="flex gap-2">
-                        <button type="button" onClick={() => { setContributionToEdit(contrib.id); setEditAmount(contrib.amount.toString()); setEditDate(contrib.date); setShowEditContribution(true); }} className="text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition"><Edit2 size={18} /></button>
+                        <button type="button" onClick={() => { setContributionToEdit(contrib.id); editAmountRef.current = contrib.amount.toString(); editDateRef.current = contrib.date; setShowEditContribution(true); }} className="text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition"><Edit2 size={18} /></button>
                         <button type="button" onClick={() => { setContributionToDelete(contrib.id); setShowDeleteContribution(true); }} className="text-red-600 hover:text-red-700 p-1 rounded hover:bg-red-50 transition"><Trash2 size={18} /></button>
                       </div>
                     )}
@@ -365,10 +370,10 @@ const SavingsTracker = () => {
         {showEditContribution && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="bg-white p-6 rounded-lg w-full max-w-md">
-              <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-gray-900">Edit Contribution</h2><button type="button" onClick={() => { setShowEditContribution(false); setContributionToEdit(null); setEditAmount(''); setEditDate(''); }}><X size={20} className="text-gray-500 hover:text-gray-700" /></button></div>
+              <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-gray-900">Edit Contribution</h2><button type="button" onClick={() => { setShowEditContribution(false); setContributionToEdit(null); editAmountRef.current = ''; editDateRef.current = ''; }}><X size={20} className="text-gray-500 hover:text-gray-700" /></button></div>
               <div className="space-y-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Amount (₱)</label><input type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="50" min="0" step="0.01" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Date</label><input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Amount (₱)</label><input type="number" defaultValue={editAmountRef.current} onChange={(e) => { editAmountRef.current = e.target.value; }} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="50" min="0" step="0.01" /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Date</label><input type="date" defaultValue={editDateRef.current} onChange={(e) => { editDateRef.current = e.target.value; }} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
                 <button type="button" onClick={handleEditContribution} className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium">Save Changes</button>
               </div>
             </div>
