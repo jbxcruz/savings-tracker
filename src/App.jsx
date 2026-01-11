@@ -6,10 +6,138 @@ const PRESET_COLORS = [
   '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'
 ];
 
+const NewGoalForm = ({ onSave, onClose }) => {
+  const [goalName, setGoalName] = useState('');
+  const [goalTarget, setGoalTarget] = useState('');
+  const [goalDeadline, setGoalDeadline] = useState('');
+  const [goalInitial, setGoalInitial] = useState('');
+  const [goalHasDeadline, setGoalHasDeadline] = useState(false);
+  const [goalColor, setGoalColor] = useState(PRESET_COLORS[0]);
+
+  const handleSubmit = () => {
+    if (!goalName || !goalTarget) {
+      alert('Please fill in required fields');
+      return;
+    }
+
+    const goal = {
+      id: crypto.randomUUID(),
+      name: goalName,
+      targetAmount: parseFloat(goalTarget),
+      currentAmount: parseFloat(goalInitial) || 0,
+      hasDeadline: goalHasDeadline,
+      deadline: goalHasDeadline ? goalDeadline : null,
+      color: goalColor,
+      contributions: goalInitial
+        ? [{
+            id: crypto.randomUUID(),
+            amount: parseFloat(goalInitial),
+            date: new Date().toISOString().split('T')[0],
+            isInitial: true
+          }]
+        : [],
+      createdAt: new Date().toISOString()
+    };
+
+    onSave(goal);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={(e) => {
+      if (e.target === e.currentTarget) onClose();
+    }}>
+      <div className="bg-white p-6 rounded-lg w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between mb-4">
+          <h2 className="text-xl font-bold">New Savings Goal</h2>
+          <button type="button" onClick={onClose}>
+            <X size={20} className="text-gray-500 hover:text-gray-700" />
+          </button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Goal Name</label>
+            <input
+              type="text"
+              value={goalName}
+              onChange={(e) => setGoalName(e.target.value)}
+              placeholder="e.g., New Phone"
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Target Amount (₱)</label>
+            <input
+              type="number"
+              value={goalTarget}
+              onChange={(e) => setGoalTarget(e.target.value)}
+              placeholder="1000"
+              min="0"
+              step="0.01"
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={goalHasDeadline}
+                onChange={(e) => setGoalHasDeadline(e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm font-medium text-gray-700">Set Deadline</span>
+            </label>
+            {goalHasDeadline && (
+              <input
+                type="date"
+                value={goalDeadline}
+                onChange={(e) => setGoalDeadline(e.target.value)}
+                className="w-full border border-gray-300 rounded px-3 py-2 mt-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Initial Amount (₱) (optional)</label>
+            <input
+              type="number"
+              value={goalInitial}
+              onChange={(e) => setGoalInitial(e.target.value)}
+              placeholder="0"
+              min="0"
+              step="0.01"
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
+            <div className="flex gap-2">
+              {PRESET_COLORS.map(color => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setGoalColor(color)}
+                  className={`w-10 h-10 rounded-full transition ${
+                    goalColor === color ? 'ring-2 ring-offset-2 ring-gray-400' : ''
+                  }`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium"
+          >
+            Create Goal
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const EditGoalModal = ({ goal, onSave, onClose }) => {
   const [name, setName] = useState(goal?.name || '');
-  
-  console.log('EditGoalModal rendered, name:', name);
 
   const handleSubmit = () => {
     if (!name.trim()) {
@@ -17,11 +145,6 @@ const EditGoalModal = ({ goal, onSave, onClose }) => {
       return;
     }
     onSave(name);
-  };
-
-  const handleChange = (e) => {
-    console.log('Input changed to:', e.target.value);
-    setName(e.target.value);
   };
 
   return (
@@ -39,7 +162,7 @@ const EditGoalModal = ({ goal, onSave, onClose }) => {
             <input
               type="text"
               value={name}
-              onChange={handleChange}
+              onChange={(e) => setName(e.target.value)}
               className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -113,8 +236,6 @@ const EditContributionModal = ({ contribution, onSave, onClose }) => {
 };
 
 const SavingsTracker = () => {
-  console.log('SavingsTracker rendered');
-  
   const [goals, setGoals] = useState([]);
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedGoalId, setSelectedGoalId] = useState(null);
@@ -127,13 +248,6 @@ const SavingsTracker = () => {
   const [goalToDelete, setGoalToDelete] = useState(null);
   const [contributionToDelete, setContributionToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const [goalName, setGoalName] = useState('');
-  const [goalTarget, setGoalTarget] = useState('');
-  const [goalDeadline, setGoalDeadline] = useState('');
-  const [goalInitial, setGoalInitial] = useState('');
-  const [goalHasDeadline, setGoalHasDeadline] = useState(false);
-  const [goalColor, setGoalColor] = useState(PRESET_COLORS[0]);
 
   const [savingAmount, setSavingAmount] = useState('');
   const [savingDate, setSavingDate] = useState(new Date().toISOString().split('T')[0]);
@@ -175,42 +289,8 @@ const SavingsTracker = () => {
     }
   };
 
-  const resetNewGoalForm = () => {
-    setGoalName('');
-    setGoalTarget('');
-    setGoalDeadline('');
-    setGoalInitial('');
-    setGoalHasDeadline(false);
-    setGoalColor(PRESET_COLORS[0]);
-  };
-
-  const handleCreateGoal = () => {
-    if (!goalName || !goalTarget) {
-      alert('Please fill in required fields');
-      return;
-    }
-
-    const goal = {
-      id: crypto.randomUUID(),
-      name: goalName,
-      targetAmount: parseFloat(goalTarget),
-      currentAmount: parseFloat(goalInitial) || 0,
-      hasDeadline: goalHasDeadline,
-      deadline: goalHasDeadline ? goalDeadline : null,
-      color: goalColor,
-      contributions: goalInitial
-        ? [{
-            id: crypto.randomUUID(),
-            amount: parseFloat(goalInitial),
-            date: new Date().toISOString().split('T')[0],
-            isInitial: true
-          }]
-        : [],
-      createdAt: new Date().toISOString()
-    };
-
+  const handleCreateGoal = (goal) => {
     saveData([...goals, goal]);
-    resetNewGoalForm();
     setShowNewGoalForm(false);
   };
 
@@ -357,26 +437,7 @@ const SavingsTracker = () => {
           </div>
         )}
       </div>
-      {showNewGoalForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            setShowNewGoalForm(false);
-            resetNewGoalForm();
-          }
-        }}>
-          <div className="bg-white p-6 rounded-lg w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between mb-4"><h2 className="text-xl font-bold">New Savings Goal</h2><button type="button" onClick={() => { setShowNewGoalForm(false); resetNewGoalForm(); }}><X size={20} className="text-gray-500 hover:text-gray-700" /></button></div>
-            <div className="space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Goal Name</label><input type="text" value={goalName} onChange={(e) => setGoalName(e.target.value)} placeholder="e.g., New Phone" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Target Amount (₱)</label><input type="number" value={goalTarget} onChange={(e) => setGoalTarget(e.target.value)} placeholder="1000" min="0" step="0.01" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-              <div><label className="flex items-center gap-2"><input type="checkbox" checked={goalHasDeadline} onChange={(e) => setGoalHasDeadline(e.target.checked)} className="rounded" /><span className="text-sm font-medium text-gray-700">Set Deadline</span></label>{goalHasDeadline && <input type="date" value={goalDeadline} onChange={(e) => setGoalDeadline(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mt-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />}</div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Initial Amount (₱) (optional)</label><input type="number" value={goalInitial} onChange={(e) => setGoalInitial(e.target.value)} placeholder="0" min="0" step="0.01" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-2">Color</label><div className="flex gap-2">{PRESET_COLORS.map(color => <button key={color} type="button" onClick={() => setGoalColor(color)} className={`w-10 h-10 rounded-full transition ${goalColor === color ? 'ring-2 ring-offset-2 ring-gray-400' : ''}`} style={{ backgroundColor: color}} />)}</div></div>
-              <button type="button" onClick={handleCreateGoal} className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium">Create Goal</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {showNewGoalForm && <NewGoalForm onSave={handleCreateGoal} onClose={() => setShowNewGoalForm(false)} />}
       {editingGoal && <EditGoalModal key={editingGoal.id} goal={editingGoal} onSave={handleSaveGoalName} onClose={() => setEditingGoal(null)} />}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
