@@ -41,7 +41,6 @@ const EditGoalModal = ({ goal, onSave, onClose }) => {
               value={name}
               onChange={handleChange}
               className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
             />
           </div>
           <button
@@ -89,7 +88,6 @@ const EditContributionModal = ({ contribution, onSave, onClose }) => {
               placeholder="50"
               min="0"
               step="0.01"
-              autoFocus
             />
           </div>
           <div>
@@ -369,7 +367,7 @@ const SavingsTracker = () => {
           <div className="bg-white p-6 rounded-lg w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between mb-4"><h2 className="text-xl font-bold">New Savings Goal</h2><button type="button" onClick={() => { setShowNewGoalForm(false); resetNewGoalForm(); }}><X size={20} className="text-gray-500 hover:text-gray-700" /></button></div>
             <div className="space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Goal Name</label><input type="text" value={goalName} onChange={(e) => setGoalName(e.target.value)} placeholder="e.g., New Phone" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" autoFocus /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Goal Name</label><input type="text" value={goalName} onChange={(e) => setGoalName(e.target.value)} placeholder="e.g., New Phone" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Target Amount (₱)</label><input type="number" value={goalTarget} onChange={(e) => setGoalTarget(e.target.value)} placeholder="1000" min="0" step="0.01" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
               <div><label className="flex items-center gap-2"><input type="checkbox" checked={goalHasDeadline} onChange={(e) => setGoalHasDeadline(e.target.checked)} className="rounded" /><span className="text-sm font-medium text-gray-700">Set Deadline</span></label>{goalHasDeadline && <input type="date" value={goalDeadline} onChange={(e) => setGoalDeadline(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 mt-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />}</div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Initial Amount (₱) (optional)</label><input type="number" value={goalInitial} onChange={(e) => setGoalInitial(e.target.value)} placeholder="0" min="0" step="0.01" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
