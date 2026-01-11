@@ -7,11 +7,19 @@ const PRESET_COLORS = [
 ];
 
 const EditGoalModal = ({ goal, onSave, onClose }) => {
-  const [name, setName] = useState(goal.name);
+  const [name, setName] = useState(goal?.name || '');
+
+  const handleSubmit = () => {
+    if (!name.trim()) {
+      alert('Goal name cannot be empty');
+      return;
+    }
+    onSave(name);
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white p-6 rounded-lg w-full max-w-md">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div className="bg-white p-6 rounded-lg w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between mb-4">
           <h2 className="text-xl font-bold">Edit Goal Name</h2>
           <button type="button" onClick={onClose}>
@@ -31,13 +39,7 @@ const EditGoalModal = ({ goal, onSave, onClose }) => {
           </div>
           <button
             type="button"
-            onClick={() => {
-              if (!name.trim()) {
-                alert('Goal name cannot be empty');
-                return;
-              }
-              onSave(name);
-            }}
+            onClick={handleSubmit}
             className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium"
           >
             Save Changes
@@ -49,12 +51,20 @@ const EditGoalModal = ({ goal, onSave, onClose }) => {
 };
 
 const EditContributionModal = ({ contribution, onSave, onClose }) => {
-  const [amount, setAmount] = useState(contribution.amount.toString());
-  const [date, setDate] = useState(contribution.date);
+  const [amount, setAmount] = useState(contribution?.amount?.toString() || '');
+  const [date, setDate] = useState(contribution?.date || '');
+
+  const handleSubmit = () => {
+    if (!amount) {
+      alert('Amount cannot be empty');
+      return;
+    }
+    onSave({ amount: parseFloat(amount), date });
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white p-6 rounded-lg w-full max-w-md">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div className="bg-white p-6 rounded-lg w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-900">Edit Contribution</h2>
           <button type="button" onClick={onClose}>
@@ -86,13 +96,7 @@ const EditContributionModal = ({ contribution, onSave, onClose }) => {
           </div>
           <button
             type="button"
-            onClick={() => {
-              if (!amount) {
-                alert('Amount cannot be empty');
-                return;
-              }
-              onSave({ amount: parseFloat(amount), date });
-            }}
+            onClick={handleSubmit}
             className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium"
           >
             Save Changes
@@ -362,7 +366,7 @@ const SavingsTracker = () => {
           </div>
         </div>
       )}
-      {editingGoal && <EditGoalModal goal={editingGoal} onSave={handleSaveGoalName} onClose={() => setEditingGoal(null)} />}
+      {editingGoal && <EditGoalModal key={editingGoal.id} goal={editingGoal} onSave={handleSaveGoalName} onClose={() => setEditingGoal(null)} />}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-md">
@@ -427,7 +431,7 @@ const SavingsTracker = () => {
             </div>
           </div>
         )}
-        {editingContribution && <EditContributionModal contribution={editingContribution} onSave={handleSaveContribution} onClose={() => setEditingContribution(null)} />}
+        {editingContribution && <EditContributionModal key={editingContribution.id} contribution={editingContribution} onSave={handleSaveContribution} onClose={() => setEditingContribution(null)} />}
         {showDeleteContribution && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="bg-white p-6 rounded-lg w-full max-w-md">
