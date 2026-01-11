@@ -1,10 +1,107 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, X, Trash2, Edit2 } from 'lucide-react';
 
 const PRESET_COLORS = [
   '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
   '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'
 ];
+
+const EditGoalModal = ({ goal, onSave, onClose }) => {
+  const [name, setName] = useState(goal.name);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white p-6 rounded-lg w-full max-w-md">
+        <div className="flex justify-between mb-4">
+          <h2 className="text-xl font-bold">Edit Goal Name</h2>
+          <button type="button" onClick={onClose}>
+            <X size={20} className="text-gray-500 hover:text-gray-700" />
+          </button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Goal Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoFocus
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (!name.trim()) {
+                alert('Goal name cannot be empty');
+                return;
+              }
+              onSave(name);
+            }}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EditContributionModal = ({ contribution, onSave, onClose }) => {
+  const [amount, setAmount] = useState(contribution.amount.toString());
+  const [date, setDate] = useState(contribution.date);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white p-6 rounded-lg w-full max-w-md">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-900">Edit Contribution</h2>
+          <button type="button" onClick={onClose}>
+            <X size={20} className="text-gray-500 hover:text-gray-700" />
+          </button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₱)</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="50"
+              min="0"
+              step="0.01"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (!amount) {
+                alert('Amount cannot be empty');
+                return;
+              }
+              onSave({ amount: parseFloat(amount), date });
+            }}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const SavingsTracker = () => {
   const [goals, setGoals] = useState([]);
@@ -13,12 +110,10 @@ const SavingsTracker = () => {
   const [showNewGoalForm, setShowNewGoalForm] = useState(false);
   const [showAddSavings, setShowAddSavings] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showEditGoal, setShowEditGoal] = useState(false);
-  const [showEditContribution, setShowEditContribution] = useState(false);
+  const [editingGoal, setEditingGoal] = useState(null);
+  const [editingContribution, setEditingContribution] = useState(null);
   const [showDeleteContribution, setShowDeleteContribution] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState(null);
-  const [goalToEdit, setGoalToEdit] = useState(null);
-  const [contributionToEdit, setContributionToEdit] = useState(null);
   const [contributionToDelete, setContributionToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,11 +126,6 @@ const SavingsTracker = () => {
 
   const [savingAmount, setSavingAmount] = useState('');
   const [savingDate, setSavingDate] = useState(new Date().toISOString().split('T')[0]);
-
-  // Using refs to avoid re-render issues
-  const editNameRef = useRef('');
-  const editAmountRef = useRef('');
-  const editDateRef = useRef('');
 
   useEffect(() => {
     loadData();
@@ -114,24 +204,15 @@ const SavingsTracker = () => {
     setShowNewGoalForm(false);
   };
 
-  const handleEditGoalName = () => {
-    const newName = editNameRef.current;
-    if (!newName.trim()) {
-      alert('Goal name cannot be empty');
-      return;
-    }
-
+  const handleSaveGoalName = (newName) => {
     const updatedGoals = goals.map(goal => {
-      if (goal.id === goalToEdit) {
+      if (goal.id === editingGoal.id) {
         return { ...goal, name: newName };
       }
       return goal;
     });
-
     saveData(updatedGoals);
-    setShowEditGoal(false);
-    setGoalToEdit(null);
-    editNameRef.current = '';
+    setEditingGoal(null);
   };
 
   const handleAddSavings = () => {
@@ -161,29 +242,21 @@ const SavingsTracker = () => {
     setShowAddSavings(false);
   };
 
-  const handleEditContribution = () => {
-    const newAmount = editAmountRef.current;
-    const newDate = editDateRef.current;
-    
-    if (!newAmount) {
-      alert('Amount cannot be empty');
-      return;
-    }
-
+  const handleSaveContribution = (updatedData) => {
     const updatedGoals = goals.map(goal => {
       if (goal.id === selectedGoalId) {
-        const oldContribution = goal.contributions.find(c => c.id === contributionToEdit);
-        const amountDifference = parseFloat(newAmount) - oldContribution.amount;
+        const oldContribution = goal.contributions.find(c => c.id === editingContribution.id);
+        const amountDifference = updatedData.amount - oldContribution.amount;
         
         return {
           ...goal,
           currentAmount: goal.currentAmount + amountDifference,
           contributions: goal.contributions.map(c => {
-            if (c.id === contributionToEdit) {
+            if (c.id === editingContribution.id) {
               return {
                 ...c,
-                amount: parseFloat(newAmount),
-                date: newDate
+                amount: updatedData.amount,
+                date: updatedData.date
               };
             }
             return c;
@@ -194,10 +267,7 @@ const SavingsTracker = () => {
     });
 
     saveData(updatedGoals);
-    setShowEditContribution(false);
-    setContributionToEdit(null);
-    editAmountRef.current = '';
-    editDateRef.current = '';
+    setEditingContribution(null);
   };
 
   const confirmDeleteContribution = () => {
@@ -269,7 +339,7 @@ const SavingsTracker = () => {
               <div key={goal.id} className="bg-white p-4 rounded-lg shadow hover:shadow-md transition flex items-center justify-between">
                 <div onClick={() => { setSelectedGoalId(goal.id); setCurrentView('details'); }} className="flex-1 cursor-pointer"><h3 className="font-semibold text-lg text-center">{goal.name}</h3></div>
                 <div className="flex gap-2">
-                  <button onClick={(e) => { e.stopPropagation(); setGoalToEdit(goal.id); editNameRef.current = goal.name; setShowEditGoal(true); }} className="text-blue-600 hover:text-blue-700 p-2 rounded hover:bg-blue-50 transition"><Edit2 size={20} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); setEditingGoal(goal); }} className="text-blue-600 hover:text-blue-700 p-2 rounded hover:bg-blue-50 transition"><Edit2 size={20} /></button>
                   <button onClick={(e) => { e.stopPropagation(); setGoalToDelete(goal.id); setShowDeleteConfirm(true); }} className="text-red-600 hover:text-red-700 p-2 rounded hover:bg-red-50 transition"><Trash2 size={20} /></button>
                 </div>
               </div>
@@ -292,17 +362,7 @@ const SavingsTracker = () => {
           </div>
         </div>
       )}
-      {showEditGoal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
-            <div className="flex justify-between mb-4"><h2 className="text-xl font-bold">Edit Goal Name</h2><button type="button" onClick={() => { setShowEditGoal(false); setGoalToEdit(null); editNameRef.current = ''; }}><X size={20} className="text-gray-500 hover:text-gray-700" /></button></div>
-            <div className="space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Goal Name</label><input type="text" defaultValue={editNameRef.current} onChange={(e) => { editNameRef.current = e.target.value; }} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-              <button type="button" onClick={handleEditGoalName} className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium">Save Changes</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {editingGoal && <EditGoalModal goal={editingGoal} onSave={handleSaveGoalName} onClose={() => setEditingGoal(null)} />}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-md">
@@ -345,7 +405,7 @@ const SavingsTracker = () => {
                     </div>
                     {!contrib.isInitial && (
                       <div className="flex gap-2">
-                        <button type="button" onClick={() => { setContributionToEdit(contrib.id); editAmountRef.current = contrib.amount.toString(); editDateRef.current = contrib.date; setShowEditContribution(true); }} className="text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition"><Edit2 size={18} /></button>
+                        <button type="button" onClick={() => setEditingContribution(contrib)} className="text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition"><Edit2 size={18} /></button>
                         <button type="button" onClick={() => { setContributionToDelete(contrib.id); setShowDeleteContribution(true); }} className="text-red-600 hover:text-red-700 p-1 rounded hover:bg-red-50 transition"><Trash2 size={18} /></button>
                       </div>
                     )}
@@ -367,18 +427,7 @@ const SavingsTracker = () => {
             </div>
           </div>
         )}
-        {showEditContribution && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white p-6 rounded-lg w-full max-w-md">
-              <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-gray-900">Edit Contribution</h2><button type="button" onClick={() => { setShowEditContribution(false); setContributionToEdit(null); editAmountRef.current = ''; editDateRef.current = ''; }}><X size={20} className="text-gray-500 hover:text-gray-700" /></button></div>
-              <div className="space-y-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Amount (₱)</label><input type="number" defaultValue={editAmountRef.current} onChange={(e) => { editAmountRef.current = e.target.value; }} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="50" min="0" step="0.01" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Date</label><input type="date" defaultValue={editDateRef.current} onChange={(e) => { editDateRef.current = e.target.value; }} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-                <button type="button" onClick={handleEditContribution} className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium">Save Changes</button>
-              </div>
-            </div>
-          </div>
-        )}
+        {editingContribution && <EditContributionModal contribution={editingContribution} onSave={handleSaveContribution} onClose={() => setEditingContribution(null)} />}
         {showDeleteContribution && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="bg-white p-6 rounded-lg w-full max-w-md">
