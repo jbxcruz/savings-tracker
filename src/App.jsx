@@ -266,23 +266,29 @@ const SavingsTracker = () => {
 
   const loadData = async () => {
     console.log('loadData called');
-    console.log('window.storage exists:', !!window.storage);
     
     try {
       if (window.storage) {
-        console.log('Attempting to load from storage...');
+        // Use Claude's storage API
+        console.log('Using window.storage');
         const result = await window.storage.get('savings-goals');
-        console.log('Storage result:', result);
         
         if (result && result.value) {
           const loadedGoals = JSON.parse(result.value);
-          console.log('Loaded goals:', loadedGoals);
+          console.log('Loaded goals from window.storage:', loadedGoals);
           setGoals(loadedGoals);
-        } else {
-          console.log('No saved goals found');
+        }
+      } else if (typeof localStorage !== 'undefined') {
+        // Fallback to localStorage
+        console.log('Using localStorage');
+        const saved = localStorage.getItem('savings-goals');
+        if (saved) {
+          const loadedGoals = JSON.parse(saved);
+          console.log('Loaded goals from localStorage:', loadedGoals);
+          setGoals(loadedGoals);
         }
       } else {
-        console.log('Storage not available');
+        console.log('No storage available');
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -292,18 +298,22 @@ const SavingsTracker = () => {
 
   const saveData = async (updatedGoals) => {
     console.log('saveData called with:', updatedGoals);
-    console.log('window.storage exists:', !!window.storage);
     
     setGoals(updatedGoals);
     
     try {
       if (window.storage) {
-        console.log('Attempting to save to storage...');
-        const result = await window.storage.set('savings-goals', JSON.stringify(updatedGoals));
-        console.log('Save result:', result);
-        console.log('Goals saved successfully');
+        // Use Claude's storage API
+        console.log('Saving to window.storage');
+        await window.storage.set('savings-goals', JSON.stringify(updatedGoals));
+        console.log('Saved to window.storage successfully');
+      } else if (typeof localStorage !== 'undefined') {
+        // Fallback to localStorage
+        console.log('Saving to localStorage');
+        localStorage.setItem('savings-goals', JSON.stringify(updatedGoals));
+        console.log('Saved to localStorage successfully');
       } else {
-        console.log('Storage not available for saving');
+        console.log('No storage available for saving');
       }
     } catch (error) {
       console.error('Error saving:', error);
