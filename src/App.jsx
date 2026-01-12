@@ -235,6 +235,195 @@ const EditContributionModal = ({ contribution, onSave, onClose }) => {
   );
 };
 
+const CalendarView = ({ goal, onClose, onEditContribution, onDeleteContribution }) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(null);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  // Get first day of month and number of days
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  // Group contributions by date
+  const contributionsByDate = {};
+  goal.contributions.forEach(contrib => {
+    const date = contrib.date;
+    if (!contributionsByDate[date]) {
+      contributionsByDate[date] = [];
+    }
+    contributionsByDate[date].push(contrib);
+  });
+
+  // Calculate monthly total for current view
+  const monthlyTotal = goal.contributions
+    .filter(c => {
+      const d = new Date(c.date);
+      return d.getFullYear() === year && d.getMonth() === month;
+    })
+    .reduce((sum, c) => sum + c.amount, 0);
+
+  const goToPreviousMonth = () => {
+    setCurrentDate(new Date(year, month - 1, 1));
+    setSelectedDay(null);
+  };
+
+  const goToNextMonth = () => {
+    setCurrentDate(new Date(year, month + 1, 1));
+    setSelectedDay(null);
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+    setSelectedDay(null);
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  };
+
+  const getDayKey = (day) => {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  const isToday = (day) => {
+    const today = new Date();
+    return today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+  };
+
+  // Generate calendar days
+  const calendarDays = [];
+  for (let i = 0; i < firstDay; i++) {
+    calendarDays.push(null);
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    calendarDays.push(day);
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">Contribution Calendar</h2>
+            <button type="button" onClick={onClose}>
+              <X size={24} className="text-gray-500 hover:text-gray-700" />
+            </button>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <button onClick={goToPreviousMonth} className="p-2 hover:bg-gray-100 rounded">
+              <ArrowLeft size={20} />
+            </button>
+            <div className="text-center">
+              <h3 className="text-xl font-semibold">
+                {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">Monthly Total: ₱{monthlyTotal.toFixed(2)}</p>
+            </div>
+            <button onClick={goToNextMonth} className="p-2 hover:bg-gray-100 rounded transform rotate-180">
+              <ArrowLeft size={20} />
+            </button>
+          </div>
+          
+          <div className="flex justify-center mt-2">
+            <button onClick={goToToday} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              Today
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="grid grid-cols-7 gap-2 mb-2">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              <div key={day} className="text-center text-sm font-semibold text-gray-600 py-2">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-2">
+            {calendarDays.map((day, index) => {
+              if (!day) {
+                return <div key={`empty-${index}`} className="aspect-square" />;
+              }
+
+              const dayKey = getDayKey(day);
+              const dayContributions = contributionsByDate[dayKey] || [];
+              const dayTotal = dayContributions.reduce((sum, c) => sum + c.amount, 0);
+              const hasContributions = dayContributions.length > 0;
+              const today = isToday(day);
+
+              return (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(hasContributions ? { day, key: dayKey, contributions: dayContributions, total: dayTotal } : null)}
+                  className={`aspect-square border rounded-lg p-2 flex flex-col items-center justify-center transition ${
+                    today ? 'border-red-500 border-2' : 'border-gray-200'
+                  } ${
+                    hasContributions ? 'bg-blue-50 hover:bg-blue-100 cursor-pointer' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <div className={`text-sm font-medium ${today ? 'text-red-600' : 'text-gray-900'}`}>
+                    {day}
+                  </div>
+                  {hasContributions && (
+                    <div className="text-xs font-semibold text-blue-600 mt-1">
+                      ₱{dayTotal.toFixed(0)}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {selectedDay && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h4 className="font-semibold text-lg mb-3">
+                {formatDate(selectedDay.key)} - ₱{selectedDay.total.toFixed(2)}
+              </h4>
+              <div className="space-y-2">
+                {selectedDay.contributions.map(contrib => (
+                  <div key={contrib.id} className="flex justify-between items-center bg-white p-3 rounded border border-gray-200">
+                    <div>
+                      <div className="font-medium">₱{contrib.amount.toFixed(2)}</div>
+                      {contrib.isInitial && <div className="text-xs text-gray-500">(Initial)</div>}
+                    </div>
+                    {!contrib.isInitial && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            onEditContribution(contrib);
+                            onClose();
+                          }}
+                          className="text-blue-600 hover:text-blue-700 p-2 rounded hover:bg-blue-50 transition"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            onDeleteContribution(contrib.id);
+                            setSelectedDay(null);
+                          }}
+                          className="text-red-600 hover:text-red-700 p-2 rounded hover:bg-red-50 transition"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AddSavingsModal = ({ onSave, onClose }) => {
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -297,6 +486,7 @@ const SavingsTracker = () => {
   const [selectedGoalId, setSelectedGoalId] = useState(null);
   const [showNewGoalForm, setShowNewGoalForm] = useState(false);
   const [showAddSavings, setShowAddSavings] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingGoal, setEditingGoal] = useState(null);
   const [editingContribution, setEditingContribution] = useState(null);
@@ -545,84 +735,32 @@ const SavingsTracker = () => {
     const goal = goals.find(g => g.id === selectedGoalId);
     if (!goal) return null;
 
-    const sortedContributions = [...goal.contributions].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    // Group contributions by month
-    const contributionsByMonth = {};
-    goal.contributions.forEach(contrib => {
-      const date = new Date(contrib.date);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      if (!contributionsByMonth[monthKey]) {
-        contributionsByMonth[monthKey] = [];
-      }
-      contributionsByMonth[monthKey].push(contrib);
-    });
-
     return (
       <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <button type="button" onClick={() => { setCurrentView('dashboard'); setSelectedGoalId(null); }} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition"><ArrowLeft size={20} />Back to Dashboard</button>
-          <div className="bg-white rounded-lg shadow-sm p-8 mb-6">
+          <div className="bg-white rounded-lg shadow-sm p-8">
             <h1 className="text-2xl font-bold text-gray-900 mb-6 text-center">{goal.name}</h1>
             <div className="flex justify-center mb-6"><PieChart goal={goal} size="large" /></div>
             {goal.hasDeadline && goal.deadline && <div className="text-center text-sm text-gray-600 mb-4">Deadline: {formatDate(goal.deadline)}</div>}
-            <div className="flex justify-center"><button type="button" onClick={() => setShowAddSavings(true)} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"><Plus size={20} />Add Savings</button></div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Contribution History</h2>
-              {sortedContributions.length === 0 ? <p className="text-gray-500 text-center py-8">No contributions yet.</p> : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {sortedContributions.map(contrib => (
-                    <div key={contrib.id} className="flex justify-between items-center border-b border-gray-100 pb-3">
-                      <div>
-                        <div className="font-medium text-gray-900">₱{contrib.amount.toFixed(2)}</div>
-                        <div className="text-sm text-gray-500">{formatDate(contrib.date)}{contrib.isInitial && <span className="ml-2 text-xs">(Initial)</span>}</div>
-                      </div>
-                      {!contrib.isInitial && (
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => setEditingContribution(contrib)} className="text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition"><Edit2 size={18} /></button>
-                          <button type="button" onClick={() => { setContributionToDelete(contrib.id); setShowDeleteContribution(true); }} className="text-red-600 hover:text-red-700 p-1 rounded hover:bg-red-50 transition"><Trash2 size={18} /></button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Monthly Summary</h2>
-              {Object.keys(contributionsByMonth).length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No contributions yet.</p>
-              ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {Object.entries(contributionsByMonth)
-                    .sort(([a], [b]) => b.localeCompare(a))
-                    .map(([month, contribs]) => {
-                      const total = contribs.reduce((sum, c) => sum + c.amount, 0);
-                      const date = new Date(month + '-01');
-                      return (
-                        <div key={month} className="border-b border-gray-100 pb-3">
-                          <div className="font-medium text-gray-900">
-                            {date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                          </div>
-                          <div className="text-gray-700 mt-1">
-                            ₱{total.toFixed(2)}
-                            <span className="text-sm text-gray-500 ml-2">
-                              ({contribs.length} {contribs.length === 1 ? 'contribution' : 'contributions'})
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
+            <div className="flex justify-center gap-3">
+              <button type="button" onClick={() => setShowAddSavings(true)} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"><Plus size={20} />Add Savings</button>
+              <button type="button" onClick={() => setShowCalendar(true)} className="flex items-center gap-2 bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition">Contribution History</button>
             </div>
           </div>
         </div>
         {showAddSavings && <AddSavingsModal onSave={handleAddSavings} onClose={() => setShowAddSavings(false)} />}
+        {showCalendar && (
+          <CalendarView 
+            goal={goal} 
+            onClose={() => setShowCalendar(false)}
+            onEditContribution={(contrib) => setEditingContribution(contrib)}
+            onDeleteContribution={(id) => {
+              setContributionToDelete(id);
+              setShowDeleteContribution(true);
+            }}
+          />
+        )}
         {editingContribution && <EditContributionModal key={editingContribution.id} contribution={editingContribution} onSave={handleSaveContribution} onClose={() => setEditingContribution(null)} />}
         {showDeleteContribution && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
