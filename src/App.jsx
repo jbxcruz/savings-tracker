@@ -235,6 +235,62 @@ const EditContributionModal = ({ contribution, onSave, onClose }) => {
   );
 };
 
+const AddSavingsModal = ({ onSave, onClose }) => {
+  const [amount, setAmount] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const handleSubmit = () => {
+    if (!amount) {
+      alert('Please enter an amount');
+      return;
+    }
+    onSave({ amount: parseFloat(amount), date });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div className="bg-white p-6 rounded-lg w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-900">Add Savings</h2>
+          <button type="button" onClick={onClose}>
+            <X size={20} className="text-gray-500 hover:text-gray-700" />
+          </button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₱)</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="50"
+              min="0"
+              step="0.01"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium"
+          >
+            Add Savings
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SavingsTracker = () => {
   const [goals, setGoals] = useState([]);
   const [currentView, setCurrentView] = useState('dashboard');
@@ -248,9 +304,6 @@ const SavingsTracker = () => {
   const [goalToDelete, setGoalToDelete] = useState(null);
   const [contributionToDelete, setContributionToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const [savingAmount, setSavingAmount] = useState('');
-  const [savingDate, setSavingDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     loadData();
@@ -336,20 +389,20 @@ const SavingsTracker = () => {
     setEditingGoal(null);
   };
 
-  const handleAddSavings = () => {
-    if (!savingAmount || !selectedGoalId) return;
+  const handleAddSavings = ({ amount, date }) => {
+    if (!selectedGoalId) return;
 
     const updatedGoals = goals.map(goal => {
       if (goal.id === selectedGoalId) {
         return {
           ...goal,
-          currentAmount: goal.currentAmount + parseFloat(savingAmount),
+          currentAmount: goal.currentAmount + amount,
           contributions: [
             ...goal.contributions,
             {
               id: crypto.randomUUID(),
-              amount: parseFloat(savingAmount),
-              date: savingDate
+              amount: amount,
+              date: date
             }
           ]
         };
@@ -358,8 +411,6 @@ const SavingsTracker = () => {
     });
 
     saveData(updatedGoals);
-    setSavingAmount('');
-    setSavingDate(new Date().toISOString().split('T')[0]);
     setShowAddSavings(false);
   };
 
@@ -522,18 +573,7 @@ const SavingsTracker = () => {
             )}
           </div>
         </div>
-        {showAddSavings && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white p-6 rounded-lg w-full max-w-md">
-              <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-gray-900">Add Savings</h2><button type="button" onClick={() => setShowAddSavings(false)}><X size={20} className="text-gray-500 hover:text-gray-700" /></button></div>
-              <div className="space-y-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Amount (₱)</label><input type="number" value={savingAmount} onChange={(e) => setSavingAmount(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="50" min="0" step="0.01" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Date</label><input type="date" value={savingDate} onChange={(e) => setSavingDate(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-                <button type="button" onClick={handleAddSavings} className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium">Add Savings</button>
-              </div>
-            </div>
-          </div>
-        )}
+        {showAddSavings && <AddSavingsModal onSave={handleAddSavings} onClose={() => setShowAddSavings(false)} />}
         {editingContribution && <EditContributionModal key={editingContribution.id} contribution={editingContribution} onSave={handleSaveContribution} onClose={() => setEditingContribution(null)} />}
         {showDeleteContribution && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
