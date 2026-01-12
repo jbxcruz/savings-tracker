@@ -265,9 +265,15 @@ const SavingsTracker = () => {
   };
 
   const loadData = async () => {
+    console.log('loadData called');
+    console.log('window.storage exists:', !!window.storage);
+    
     try {
       if (window.storage) {
+        console.log('Attempting to load from storage...');
         const result = await window.storage.get('savings-goals');
+        console.log('Storage result:', result);
+        
         if (result && result.value) {
           const loadedGoals = JSON.parse(result.value);
           console.log('Loaded goals:', loadedGoals);
@@ -285,11 +291,16 @@ const SavingsTracker = () => {
   };
 
   const saveData = async (updatedGoals) => {
+    console.log('saveData called with:', updatedGoals);
+    console.log('window.storage exists:', !!window.storage);
+    
     setGoals(updatedGoals);
+    
     try {
       if (window.storage) {
-        console.log('Saving goals:', updatedGoals);
-        await window.storage.set('savings-goals', JSON.stringify(updatedGoals));
+        console.log('Attempting to save to storage...');
+        const result = await window.storage.set('savings-goals', JSON.stringify(updatedGoals));
+        console.log('Save result:', result);
         console.log('Goals saved successfully');
       } else {
         console.log('Storage not available for saving');
