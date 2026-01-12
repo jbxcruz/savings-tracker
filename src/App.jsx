@@ -304,7 +304,7 @@ const CalendarView = ({ goal, onClose, onEditContribution, onDeleteContribution 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold text-gray-900">Contribution Calendar</h2>
@@ -359,66 +359,101 @@ const CalendarView = ({ goal, onClose, onEditContribution, onDeleteContribution 
               return (
                 <button
                   key={day}
-                  onClick={() => setSelectedDay(hasContributions ? { day, key: dayKey, contributions: dayContributions, total: dayTotal } : null)}
-                  className={`aspect-square border rounded-lg p-2 flex flex-col items-center justify-center transition ${
+                  onClick={() => hasContributions && setSelectedDay({ day, key: dayKey, contributions: dayContributions, total: dayTotal })}
+                  className={`aspect-square border rounded-lg p-2 relative transition ${
                     today ? 'border-red-500 border-2' : 'border-gray-200'
                   } ${
                     hasContributions ? 'bg-blue-50 hover:bg-blue-100 cursor-pointer' : 'hover:bg-gray-50'
                   }`}
                 >
-                  <div className={`text-sm font-medium ${today ? 'text-red-600' : 'text-gray-900'}`}>
+                  <div className={`absolute top-2 left-2 text-sm font-medium ${today ? 'text-red-600' : 'text-gray-900'}`}>
                     {day}
                   </div>
                   {hasContributions && (
-                    <div className="text-xs font-semibold text-blue-600 mt-1">
-                      ₱{dayTotal.toFixed(0)}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-lg font-bold text-blue-600">
+                        ₱{dayTotal.toFixed(0)}
+                      </div>
                     </div>
                   )}
                 </button>
               );
             })}
           </div>
+        </div>
 
-          {selectedDay && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h4 className="font-semibold text-lg mb-3">
-                {formatDate(selectedDay.key)} - ₱{selectedDay.total.toFixed(2)}
-              </h4>
-              <div className="space-y-2">
-                {selectedDay.contributions.map(contrib => (
-                  <div key={contrib.id} className="flex justify-between items-center bg-white p-3 rounded border border-gray-200">
-                    <div>
-                      <div className="font-medium">₱{contrib.amount.toFixed(2)}</div>
-                      {contrib.isInitial && <div className="text-xs text-gray-500">(Initial)</div>}
-                    </div>
-                    {!contrib.isInitial && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            onEditContribution(contrib);
-                            onClose();
-                          }}
-                          className="text-blue-600 hover:text-blue-700 p-2 rounded hover:bg-blue-50 transition"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            onDeleteContribution(contrib.id);
-                            setSelectedDay(null);
-                          }}
-                          className="text-red-600 hover:text-red-700 p-2 rounded hover:bg-red-50 transition"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+        {selectedDay && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedDay(null)}>
+            <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="sticky top-0 bg-white border-b border-gray-200 p-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-bold text-gray-900">Day Details</h3>
+                  <button type="button" onClick={() => setSelectedDay(null)}>
+                    <X size={20} className="text-gray-500 hover:text-gray-700" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className="mb-6">
+                  <div className="text-sm text-gray-600 mb-1">Date</div>
+                  <div className="text-lg font-semibold">{formatDate(selectedDay.key)}</div>
+                </div>
+
+                <div className="mb-6">
+                  <div className="text-sm text-gray-600 mb-1">Total Contributed</div>
+                  <div className="text-2xl font-bold text-blue-600">₱{selectedDay.total.toFixed(2)}</div>
+                </div>
+
+                <div className="space-y-3">
+                  {selectedDay.contributions.map(contrib => (
+                    <div key={contrib.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <div className="text-lg font-semibold text-gray-900">₱{contrib.amount.toFixed(2)}</div>
+                          {contrib.isInitial && <div className="text-xs text-gray-500 mt-1">(Initial Contribution)</div>}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      
+                      {!contrib.isInitial && (
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            onClick={() => {
+                              onEditContribution(contrib);
+                              setSelectedDay(null);
+                              onClose();
+                            }}
+                            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+                          >
+                            <Edit2 size={16} />
+                            Modify
+                          </button>
+                          <button
+                            onClick={() => {
+                              onDeleteContribution(contrib.id);
+                              setSelectedDay(null);
+                            }}
+                            className="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition"
+                          >
+                            <Trash2 size={16} />
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setSelectedDay(null)}
+                  className="w-full mt-6 bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300 transition font-medium"
+                >
+                  Back
+                </button>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
