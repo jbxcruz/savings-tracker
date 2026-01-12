@@ -269,11 +269,17 @@ const SavingsTracker = () => {
       if (window.storage) {
         const result = await window.storage.get('savings-goals');
         if (result && result.value) {
-          setGoals(JSON.parse(result.value));
+          const loadedGoals = JSON.parse(result.value);
+          console.log('Loaded goals:', loadedGoals);
+          setGoals(loadedGoals);
+        } else {
+          console.log('No saved goals found');
         }
+      } else {
+        console.log('Storage not available');
       }
     } catch (error) {
-      console.log('No existing data:', error);
+      console.error('Error loading data:', error);
     }
     setLoading(false);
   };
@@ -282,7 +288,11 @@ const SavingsTracker = () => {
     setGoals(updatedGoals);
     try {
       if (window.storage) {
+        console.log('Saving goals:', updatedGoals);
         await window.storage.set('savings-goals', JSON.stringify(updatedGoals));
+        console.log('Goals saved successfully');
+      } else {
+        console.log('Storage not available for saving');
       }
     } catch (error) {
       console.error('Error saving:', error);
