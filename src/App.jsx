@@ -394,9 +394,15 @@ const SavingsTracker = () => {
 
     const updatedGoals = goals.map(goal => {
       if (goal.id === selectedGoalId) {
+        const newCurrentAmount = goal.currentAmount + amount;
+        const isNowComplete = newCurrentAmount >= goal.targetAmount && goal.currentAmount < goal.targetAmount;
+        
         return {
           ...goal,
-          currentAmount: goal.currentAmount + amount,
+          currentAmount: newCurrentAmount,
+          name: isNowComplete && !goal.name.includes('(Completed)') 
+            ? `${goal.name} (Completed)` 
+            : goal.name,
           contributions: [
             ...goal.contributions,
             {
@@ -541,9 +547,20 @@ const SavingsTracker = () => {
 
     const sortedContributions = [...goal.contributions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
+    // Group contributions by month
+    const contributionsByMonth = {};
+    goal.contributions.forEach(contrib => {
+      const date = new Date(contrib.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!contributionsByMonth[monthKey]) {
+        contributionsByMonth[monthKey] = [];
+      }
+      contributionsByMonth[monthKey].push(contrib);
+    });
+
     return (
       <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <button type="button" onClick={() => { setCurrentView('dashboard'); setSelectedGoalId(null); }} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition"><ArrowLeft size={20} />Back to Dashboard</button>
           <div className="bg-white rounded-lg shadow-sm p-8 mb-6">
             <h1 className="text-2xl font-bold text-gray-900 mb-6 text-center">{goal.name}</h1>
@@ -551,26 +568,58 @@ const SavingsTracker = () => {
             {goal.hasDeadline && goal.deadline && <div className="text-center text-sm text-gray-600 mb-4">Deadline: {formatDate(goal.deadline)}</div>}
             <div className="flex justify-center"><button type="button" onClick={() => setShowAddSavings(true)} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"><Plus size={20} />Add Savings</button></div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Contribution History</h2>
-            {sortedContributions.length === 0 ? <p className="text-gray-500 text-center py-8">No contributions yet.</p> : (
-              <div className="space-y-3">
-                {sortedContributions.map(contrib => (
-                  <div key={contrib.id} className="flex justify-between items-center border-b border-gray-100 pb-3">
-                    <div>
-                      <div className="font-medium text-gray-900">₱{contrib.amount.toFixed(2)}</div>
-                      <div className="text-sm text-gray-500">{formatDate(contrib.date)}{contrib.isInitial && <span className="ml-2 text-xs">(Initial)</span>}</div>
-                    </div>
-                    {!contrib.isInitial && (
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => setEditingContribution(contrib)} className="text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition"><Edit2 size={18} /></button>
-                        <button type="button" onClick={() => { setContributionToDelete(contrib.id); setShowDeleteContribution(true); }} className="text-red-600 hover:text-red-700 p-1 rounded hover:bg-red-50 transition"><Trash2 size={18} /></button>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Contribution History</h2>
+              {sortedContributions.length === 0 ? <p className="text-gray-500 text-center py-8">No contributions yet.</p> : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {sortedContributions.map(contrib => (
+                    <div key={contrib.id} className="flex justify-between items-center border-b border-gray-100 pb-3">
+                      <div>
+                        <div className="font-medium text-gray-900">₱{contrib.amount.toFixed(2)}</div>
+                        <div className="text-sm text-gray-500">{formatDate(contrib.date)}{contrib.isInitial && <span className="ml-2 text-xs">(Initial)</span>}</div>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                      {!contrib.isInitial && (
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setEditingContribution(contrib)} className="text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition"><Edit2 size={18} /></button>
+                          <button type="button" onClick={() => { setContributionToDelete(contrib.id); setShowDeleteContribution(true); }} className="text-red-600 hover:text-red-700 p-1 rounded hover:bg-red-50 transition"><Trash2 size={18} /></button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Monthly Summary</h2>
+              {Object.keys(contributionsByMonth).length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No contributions yet.</p>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {Object.entries(contributionsByMonth)
+                    .sort(([a], [b]) => b.localeCompare(a))
+                    .map(([month, contribs]) => {
+                      const total = contribs.reduce((sum, c) => sum + c.amount, 0);
+                      const date = new Date(month + '-01');
+                      return (
+                        <div key={month} className="border-b border-gray-100 pb-3">
+                          <div className="font-medium text-gray-900">
+                            {date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                          </div>
+                          <div className="text-gray-700 mt-1">
+                            ₱{total.toFixed(2)}
+                            <span className="text-sm text-gray-500 ml-2">
+                              ({contribs.length} {contribs.length === 1 ? 'contribution' : 'contributions'})
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         {showAddSavings && <AddSavingsModal onSave={handleAddSavings} onClose={() => setShowAddSavings(false)} />}
